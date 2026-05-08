@@ -48,6 +48,10 @@
     font-weight: bold;
     color: #e94560;
   }
+  #lives {
+    font-size: 16px;
+    letter-spacing: 4px;
+  }
   #next-canvas {
     display: block;
     margin: 0 auto;
@@ -87,6 +91,10 @@
     <div class="panel-box">
       <h3>Lines</h3>
       <p id="lines">0</p>
+    </div>
+    <div class="panel-box">
+      <h3>Lives</h3>
+      <p id="lives">♥ ♥ ♥</p>
     </div>
     <div class="panel-box">
       <h3>Next</h3>
@@ -131,7 +139,8 @@ const SHAPES = [
   [[0,0,7],[7,7,7],[0,0,0]],                   // L
 ];
 
-let board, piece, nextPiece, score, level, lines, dropInterval, lastTime, paused, gameOver;
+const MAX_LIVES = 3;
+let board, piece, nextPiece, score, level, lines, lives, dropInterval, lastTime, paused, gameOver, lifeLost;
 
 function createBoard() {
   return Array.from({length: ROWS}, () => Array(COLS).fill(0));
@@ -183,8 +192,22 @@ function lock() {
   piece = nextPiece;
   nextPiece = randomPiece();
   if (collides(piece, board)) {
-    gameOver = true;
-    showMessage('GAME OVER');
+    lives--;
+    updateUI();
+    if (lives <= 0) {
+      gameOver = true;
+      showMessage('GAME OVER');
+    } else {
+      lifeLost = true;
+      showMessage(`LIFE LOST!  남은 목숨: ${'♥'.repeat(lives)}`);
+      setTimeout(() => {
+        board = createBoard();
+        piece = randomPiece();
+        nextPiece = randomPiece();
+        lifeLost = false;
+        hideMessage();
+      }, 1500);
+    }
   }
 }
 
@@ -251,7 +274,7 @@ function draw() {
   board.forEach((row, r) => row.forEach((val, c) => drawBlock(ctx, c, r, val)));
 
   // ghost
-  if (!gameOver && !paused) drawGhost();
+  if (!gameOver && !paused && !lifeLost) drawGhost();
 
   // active piece
   if (!gameOver && piece) {
@@ -282,6 +305,7 @@ function updateUI() {
   document.getElementById('score').textContent = score.toLocaleString();
   document.getElementById('level').textContent = level;
   document.getElementById('lines').textContent = lines;
+  document.getElementById('lives').textContent = '♥'.repeat(lives) || '☆';
 }
 
 function showMessage(text) {
@@ -301,9 +325,9 @@ function init() {
   board = createBoard();
   piece = randomPiece();
   nextPiece = randomPiece();
-  score = 0; level = 1; lines = 0;
+  score = 0; level = 1; lines = 0; lives = MAX_LIVES;
   dropInterval = 1000;
-  paused = false; gameOver = false;
+  paused = false; gameOver = false; lifeLost = false;
   lastTime = 0;
   hideMessage();
   updateUI();
@@ -312,7 +336,7 @@ function init() {
 let dropCounter = 0;
 
 function gameLoop(timestamp) {
-  if (!paused && !gameOver) {
+  if (!paused && !gameOver && !lifeLost) {
     const delta = timestamp - lastTime;
     lastTime = timestamp;
     dropCounter += delta;
